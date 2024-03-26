@@ -15,13 +15,60 @@ cd "C:\Users\rafaelch"
 *Load data
 use "HumanTrafficking\Data_waste\uneployment_weverything.dta", clear
 
-*transform variables
-gen casepc=(case/population)*100000
-gen logcase2=log(case+1)
-gen logcase=log(casepc+1)
-gen asinhcase=asinh(casepc)
-gen logcharcoal_tons=log(charcoal_tons+1)
-gen asinhcharcoal_tons=asinh(charcoal_tons)
+/*transform outcome variables: human trafficking
+1. rescued
+2. labor_tips_settlement
+3. case_settlement
+
+Control variables:
+1. popnumeric
+
+Treatments
+1. Pig iron:
+2. Gold:
+3. Hog:
+4. Cattle:
+a. lc1
+b. quant_cattle_heads
+5. Charcoal: 
+b. quant_charcoal_vegetation_tons
+6. Lumber/timber: (David searches for International price)
+b.
+
+7. forestformation_diff (check if its deforestation)
+
+*/
+
+*Transformation of outcomes:
+foreach var in rescued labor_tips_settlement case_settlement[
+gen `var'pc=(`var'/popnumeric)*100000
+gen log`var'2=log(`var'+1)
+gen log`var'pc=log(`var'pc+1)
+gen asinh`var'pc=asinh(`var'pc)
+}
+
+/*transform treatment variable: human trafficking
+1. rescued
+2. 
+*/
+
+*Transformation of treatments:
+rename quant_charcoal_vegetation_tons charcoal_tons
+rename quant_cattle_heads cattle_heads
+
+foreach var in quant_cattle_heads charcoal_tons forestformation_diff{
+gen log`var'=log(`var'+1)
+gen asinh`var'=asinh(`var')
+}
+
+
+*Transformation of controls:
+foreach var in popnumeric{
+gen log`var'=log(`var'+1)
+gen asinh`var'=asinh(`var')
+}
+
+
 *===========================================================================================
 *Set panel data
 xtset mun_id_res rescue_year
