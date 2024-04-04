@@ -1,0 +1,53 @@
+
+// the following code performs a merge between landuse file and the commodities'
+//future prices 
+
+
+//load prices data
+clear
+
+insheet using "C:/Commodity pricing/Data/working_copies_David/obtaningDataset/Processed/merged_filled_prices.csv", clear
+
+// Extract the date portion from the variable
+gen Date_str = regexs(1) if regexm(date, "(.+)\s\|")
+
+// Convert the extracted date into Stata's date format
+gen Date_stata = date(date, "YMD")
+
+// Display the dates in a readable format
+format Date_stata %td
+
+// Display the first few observations to verify
+list Date_stata in 1/5
+
+// Display the first few observations to verify
+list Date_stata in 1/10
+
+// Extract the year from Date_stata variable
+gen year_stata = year(Date_stata)
+
+// Display the first few observations of year_stata to verify
+list year_stata in 1/5
+
+// Collapse the dataset per year with the average of each variable
+collapse (mean) lcc1trdprc_1 trapi2mc1trdprc_1 mtfc1trdprc_1 cmap4c1trdprc_1 xaubid lhc1trdprc_1 tioc1trdprc_1, by(year_stata)
+
+// Rename the variable year_stata to year
+rename year_stata year
+
+// Save the collapsed dataset as collapsed_prices_year.dta
+save "collapsed_prices_year.dta", replace
+
+//merge compa
+* Load the master dataset
+cd "C:/Commodity pricing/Data/working_copies_David/obtaningDataset/Processed/"
+
+use land_use_major_crops_cases_agshare_gdp_pop_merged, clear
+
+* Merge with the using dataset
+merge m:1 year using collapsed_prices_year.dta
+
+* Check the results of the merge
+tabulate _merge
+
+save "C:/Commodity pricing/Data/working_copies_David/obtaningDataset/Processed/merged_dataset.dta", replace
