@@ -1,0 +1,66 @@
+# Load necessary libraries
+library(readr)  # For reading CSV files
+library(dplyr)  # For data manipulation
+library(tidyr)  # For filling in missing values
+library(purrr)  # For functional programming tools
+library(zoo)    # For filling in NaN values
+
+# Define the base path to where your files are located on your computer
+base_path <- "C:/Users/engin/OneDrive/Desktop/Carpetas/STANFORD/secondQuarter/HTL/CommoditiesData/raw/"
+
+# Read the files
+cattle_prices <- read_csv(paste0(base_path, "Cattle_LCc1.csv"), show_col_types = FALSE)
+coal_prices <- read_csv(paste0(base_path, "Coal_TRAPI2Mc1.csv"), show_col_types = FALSE)
+gold_prices <- read_csv(paste0(base_path, "Gold_XAU.csv"), show_col_types = FALSE)
+hog_prices <- read_csv(paste0(base_path, "Hog_LHC1.csv"), show_col_types = FALSE)
+iron_prices <- read_csv(paste0(base_path, "Iron_TIOc1_CHT.csv"), show_col_types = FALSE)
+
+# Convert 'Date' columns to Date type using the correct format
+datasets <- list(cattle_prices, coal_prices, gold_prices, hog_prices)
+names(datasets) <- c("cattle_prices", "coal_prices", "gold_prices", "hog_prices")
+
+for (name in names(datasets)) {
+  datasets[[name]] <- datasets[[name]] %>%
+    mutate(Date = as.Date(Date, format = "%d/%m/%Y"))
+}
+
+# Perform a full join on all datasets except iron_prices by 'Date'
+merged_data <- reduce(datasets, full_join, by = "Date")
+
+# Prepare iron_prices separately
+iron_prices$Date <- as.Date(iron_prices$Date, format = "%d/%m/%Y")
+
+# Create a cutoff date for iron prices
+iron_cutoff_date <- as.Date("22/10/2010", format="%d/%m/%Y")
+
+# Merge iron_prices after handling missing values
+merged_data <- merged_data %>%
+  full_join(iron_prices, by = "Date") %>%
+  mutate(`TIOc1 (TRDPRC_1)` = if_else(Date < iron_cutoff_date, NA_real_, `TIOc1 (TRDPRC_1)`)) %>%
+  mutate(`TIOc1 (TRDPRC_1)` = na.locf(`TIOc1 (TRDPRC_1)`, na.rm = FALSE))
+
+# Fill in missing values with the latest available non-NA value (carry the last observation forward)
+# for all columns except TIOc1 (TRDPRC_1) which has already been handled
+merged_data_filled <- merged_data %>%
+  mutate(across(-c(Date, `TIOc1 (TRDPRC_1)`), ~na.locf(.)))
+
+# Save the result as an R dataset
+save(merged_data_filled, file = paste0(base_path, "merged_filled_prices.RData"))
+
+# Reload and view the dataset
+load(paste0(base_path, "merged_filled_prices.RData"))
+
+# Show the first 100 rows of the dataset
+tail(merged_data_filled, 100)
+
+# ... [previous code]
+
+# Save the merged and filled dataset as a CSV file
+write_csv(merged_data_filled, file = paste0(base_path, "merged_filled_prices.csv"))
+
+saveRDS(merged_data_filled, "C:/Users/engin/OneDrive/Desktop/Carpetas/STANFORD/secondQuarter/HTL/CommoditiesData/processed/merged_filled_prices.rds")
+
+# Load the dataset from the RDS file
+merged_filled_prices <- readRDS(file.path(base_path, "merged_filled_prices.rds"))
+
+# View the dataset
